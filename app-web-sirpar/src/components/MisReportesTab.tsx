@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { BsGeoAlt, BsLock, BsClock, BsPerson, BsChat, BsClipboard } from 'react-icons/bs';
 
 export function MisReportesTab() {
   const [reportes, setReportes] = useState<any[]>([]);
@@ -12,7 +13,7 @@ export function MisReportesTab() {
   const cargarReportes = async () => {
     try {
       setCargando(true);
-      const response = await fetch('/api/reports', {
+      const response = await fetch('http://localhost:5000/api/reports', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
@@ -25,7 +26,7 @@ export function MisReportesTab() {
         setError('No se pudieron cargar los reportes');
       }
     } catch (err: any) {
-      console.error('❌ Error:', err);
+      console.error('Error:', err);
       setError('Error al cargar los reportes');
     } finally {
       setCargando(false);
@@ -59,24 +60,28 @@ export function MisReportesTab() {
   };
 
   const getTipoIncidenteLabel = (tipo: string) => {
-    return tipo === 'quema_ilegal' ? '🔥 Quema de residuos' : '🗑️ Acumulación de residuos';
+    return tipo === 'quema_ilegal' ? 'Quema de residuos' : 'Acumulación de residuos';
+  };
+
+  const formatearIdReporte = (id: string) => {
+    return `REP-${id?.toString().slice(-4).toUpperCase()}`;
   };
 
   return (
     <div style={{
       backgroundColor: '#fff',
-      padding: '2rem',
+      padding: 'clamp(1.5rem, 5vw, 2rem)',
       borderRadius: '1rem',
       boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-      maxWidth: '900px',
+      maxWidth: '100%',
       margin: '0 auto',
     }}>
       <h2 style={{
-        fontSize: '1.8rem',
+        fontSize: 'clamp(1.5rem, 4vw, 1.8rem)',
         fontWeight: '700',
         color: '#2d7a47',
         fontFamily: "'Poppins', sans-serif",
-        marginBottom: '2rem',
+        marginBottom: 'clamp(1.5rem, 3vw, 2rem)',
       }}>
         Mis Reportes
       </h2>
@@ -87,7 +92,7 @@ export function MisReportesTab() {
           color: '#666',
           fontFamily: "'Poppins', sans-serif",
         }}>
-          ⏳ Cargando reportes...
+          Cargando reportes...
         </p>
       )}
 
@@ -118,135 +123,219 @@ export function MisReportesTab() {
       {!cargando && reportes.length > 0 && (
         <div style={{
           display: 'grid',
-          gap: '1.5rem',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(clamp(250px, 90vw, 300px), 1fr))',
+          gap: 'clamp(1rem, 3vw, 1.5rem)',
+          justifyItems: 'start',
+          alignItems: 'start',
         }}>
           {reportes.map(reporte => (
             <div key={reporte._id} style={{
               border: '1px solid #e0e0e0',
               borderRadius: '0.75rem',
-              padding: '1.5rem',
-              backgroundColor: '#f9f9f9',
+              overflow: 'hidden',
+              backgroundColor: '#fff',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+              display: 'flex',
+              flexDirection: 'column',
+              width: '100%',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
             }}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'start',
-                marginBottom: '1rem',
-              }}>
-                <div>
-                  <p style={{
-                    fontFamily: "'Poppins', sans-serif",
-                    fontWeight: '600',
-                    fontSize: '1rem',
-                    color: '#333',
-                    margin: '0 0 0.5rem 0',
-                  }}>
-                    {getTipoIncidenteLabel(reporte.tipoIncidente)}
-                  </p>
-                  <p style={{
-                    fontFamily: "'Poppins', sans-serif",
-                    fontSize: '0.9rem',
-                    color: '#666',
-                    margin: '0',
-                  }}>
-                    📍 {reporte.ubicacion?.distrito}, {reporte.ubicacion?.provincia}
-                  </p>
-                </div>
+              {/* Imagen del reporte con badges */}
+              {reporte.imagenes && reporte.imagenes[0] && (
                 <div style={{
-                  backgroundColor: getEstadoColor(reporte.estado),
-                  color: '#fff',
-                  padding: '0.5rem 1rem',
-                  borderRadius: '0.5rem',
-                  fontFamily: "'Poppins', sans-serif",
-                  fontSize: '0.85rem',
-                  fontWeight: '600',
-                  whiteSpace: 'nowrap',
+                  width: '100%',
+                  height: '160px',
+                  backgroundColor: '#e0e0e0',
+                  overflow: 'hidden',
+                  position: 'relative',
                 }}>
-                  {getEstadoLabel(reporte.estado)}
+                  <img
+                    src={reporte.imagenes[0].url}
+                    alt={reporte.tipoIncidente}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                    }}
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                  
+                  {/* Badge de estado - IZQUIERDA */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '0.6rem',
+                    left: '0.6rem',
+                    backgroundColor: '#fff',
+                    color: getEstadoColor(reporte.estado),
+                    border: `2px solid ${getEstadoColor(reporte.estado)}`,
+                    padding: '0.3rem 0.6rem',
+                    borderRadius: '0.25rem',
+                    fontFamily: "'Poppins', sans-serif",
+                    fontSize: '0.65rem',
+                    fontWeight: '700',
+                    textTransform: 'uppercase',
+                    zIndex: 10,
+                  }}>
+                    {getEstadoLabel(reporte.estado).split(' ')[0]}
+                  </div>
                 </div>
-              </div>
-
-              {reporte.descripcion && (
-                <p style={{
-                  fontFamily: "'Poppins', sans-serif",
-                  fontSize: '0.9rem',
-                  color: '#666',
-                  margin: '0.75rem 0',
-                  paddingLeft: '1rem',
-                  borderLeft: '3px solid #2d7a47',
-                }}>
-                  "{reporte.descripcion}"
-                </p>
               )}
 
+              {/* Contenido */}
               <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-                gap: '1rem',
-                marginTop: '1rem',
-                paddingTop: '1rem',
-                borderTop: '1px solid #e0e0e0',
+                padding: '1rem',
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.6rem',
+                alignItems: 'flex-start',
               }}>
-                <div>
-                  <p style={{
-                    fontFamily: "'Poppins', sans-serif",
-                    fontSize: '0.8rem',
-                    color: '#999',
-                    margin: '0 0 0.25rem 0',
-                  }}>
-                    Nivel de Riesgo
-                  </p>
-                  <p style={{
-                    fontFamily: "'Poppins', sans-serif",
-                    fontSize: '0.95rem',
-                    fontWeight: '600',
-                    color: '#333',
-                    margin: '0',
-                    textTransform: 'capitalize',
-                  }}>
-                    {reporte.nivelPercibido}
-                  </p>
+                {/* ID del Reporte */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontFamily: "'Poppins', sans-serif",
+                  fontSize: '0.75rem',
+                  color: '#2d7a47',
+                  fontWeight: '700',
+                  marginBottom: '0.3rem',
+                  backgroundColor: '#e8f5e9',
+                  border: '1px solid #a5d6a7',
+                  padding: '0.4rem 0.8rem',
+                  borderRadius: '0.3rem',
+                  width: 'fit-content',
+                }}>
+                  <BsClipboard size={14} />
+                  {formatearIdReporte(reporte._id)}
                 </div>
-                <div>
-                  <p style={{
-                    fontFamily: "'Poppins', sans-serif",
-                    fontSize: '0.8rem',
-                    color: '#999',
-                    margin: '0 0 0.25rem 0',
-                  }}>
-                    Fecha de Reporte
-                  </p>
-                  <p style={{
-                    fontFamily: "'Poppins', sans-serif",
-                    fontSize: '0.95rem',
-                    fontWeight: '600',
-                    color: '#333',
-                    margin: '0',
-                  }}>
-                    {new Date(reporte.fechas?.creado).toLocaleDateString('es-PE')}
-                  </p>
+
+                {/* Hora */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  fontFamily: "'Poppins', sans-serif",
+                  fontSize: '0.75rem',
+                  color: '#999',
+                }}>
+                  <BsClock size={12} />
+                  {reporte.fechas?.creado ? 
+                    (() => {
+                      const fecha = new Date(reporte.fechas.creado);
+                      const hoy = new Date();
+                      const esHoy = fecha.toDateString() === hoy.toDateString();
+                      return esHoy ? `Hoy, ${fecha.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}` : 
+                             fecha.toLocaleDateString('es-PE');
+                    })()
+                    : 'Sin fecha'
+                  }
                 </div>
-                {reporte.anonimo && (
-                  <div>
+
+                {/* Tipo de incidente y Nivel de Riesgo */}
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-start',
+                  width: '100%',
+                }}>
+                  <span style={{
+                    fontFamily: "'Poppins', sans-serif",
+                    fontWeight: '700',
+                    fontSize: '0.9rem',
+                    color: '#2d7a47',
+                    margin: '0',
+                    textTransform: 'uppercase',
+                    lineHeight: '1.2',
+                  }}>
+                    {getTipoIncidenteLabel(reporte.tipoIncidente)}
+                  </span>
+                  <div style={{
+                    backgroundColor: reporte.nivelCalculado === 'alto' ? '#d32f2f' : 
+                                    reporte.nivelCalculado === 'medio' ? '#f57c00' : '#388e3c',
+                    color: '#fff',
+                    padding: '0.1rem 1rem',
+                    borderRadius: '0.40rem',
+                    fontFamily: "'Poppins', sans-serif",
+                    fontSize: '0.6rem',
+                    fontWeight: '700',
+                    textTransform: 'uppercase',
+                    whiteSpace: 'nowrap',
+                    marginTop: '0.6em',
+                  }}>
+                    RIESGO {reporte.nivelCalculado}
+                  </div>
+                </div>
+
+                {/* Ubicación */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '0.4rem',
+                  fontFamily: "'Poppins', sans-serif",
+                  fontSize: '0.85rem',
+                  color: '#5a5a5a',
+                }}>
+                  <BsGeoAlt size={14} style={{ minWidth: '14px', marginTop: '2px' }} />
+                  <span>{reporte.ubicacion?.direccion || `${reporte.ubicacion?.distrito}, ${reporte.ubicacion?.provincia}`}</span>
+                </div>
+
+                {/* Descripción */}
+                {reporte.descripcion && (
+                  <div style={{
+                    display: 'flex',
+                    gap: '0.4rem',
+                    alignItems: 'flex-start',
+                    marginTop: '0.5rem',
+                  }}>
+                    <BsChat size={14} style={{ minWidth: '14px', marginTop: '2px', color: '#2d7a47', flexShrink: 0 }} />
                     <p style={{
                       fontFamily: "'Poppins', sans-serif",
                       fontSize: '0.8rem',
-                      color: '#999',
-                      margin: '0 0 0.25rem 0',
-                    }}>
-                      Privacidad
-                    </p>
-                    <p style={{
-                      fontFamily: "'Poppins', sans-serif",
-                      fontSize: '0.95rem',
-                      fontWeight: '600',
-                      color: '#2d7a47',
+                      color: '#666',
                       margin: '0',
+                      lineHeight: '1.4',
+                      fontStyle: 'italic',
+                      minHeight: '2.4em',
                     }}>
-                      🔒 Anónimo
+                      "{reporte.descripcion}"
                     </p>
                   </div>
                 )}
+
+                {/* Usuario o Anónimo */}
+                <div style={{
+                  marginTop: 'auto',
+                  paddingTop: '0.75rem',
+                  borderTop: '1px solid #e0e0e0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  fontFamily: "'Poppins', sans-serif",
+                  fontSize: '0.8rem',
+                }}>
+                  {reporte.anonimo ? (
+                    <>
+                      <BsLock size={13} style={{ color: '#9c9c9c' }} />
+                      <span style={{ color: '#9c9c9c', fontWeight: '500' }}>ANÓNIMO</span>
+                    </>
+                  ) : (
+                    <>
+                      <BsPerson size={13} style={{ color: '#666' }} />
+                      <span style={{ color: '#666', fontWeight: '500' }}>{reporte.usuario?.nombre || 'Usuario'}</span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           ))}

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { GoogleMap, MarkerF, InfoWindowF, useJsApiLoader } from '@react-google-maps/api';
+import { BsGeoAlt } from 'react-icons/bs';
 
 export interface ZonaGeo {
   nombre: string;
@@ -290,9 +291,13 @@ export function ZonasNivelRiesgo({
         fontSize: 'clamp(0.9rem, 2.5vw, 1rem)',
         color: '#6b7280',
         marginBottom: 'clamp(2rem, 5vw, 3rem)',
-        fontFamily: "'Poppins', sans-serif"
+        fontFamily: "'Poppins', sans-serif",
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '0.5rem',
       }}>
-        📍 Haz clic en los marcadores para ver los detalles de cada zona
+        <BsGeoAlt size={18} /> Haz clic en los marcadores para ver los detalles de cada zona
       </p>
 
       {/* Leyenda */}

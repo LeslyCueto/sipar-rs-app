@@ -29,20 +29,28 @@ const ReportSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
-  imagen: {
-    url: {
-      type: String, // Base64 o URL
-      required: true,
+  imagenes: [
+    {
+      url: {
+        type: String, // Base64 o URL
+        required: true,
+      },
+      nombre: String,
+      tipo: {
+        type: String,
+        enum: ['capturada', 'cargada'],
+      },
+      fecha: {
+        type: Date,
+        default: Date.now,
+      },
     },
-    fechaCaptura: {
-      type: Date,
-      default: Date.now,
-    },
-  },
+  ],
   ubicacion: {
     departamento: String,
     provincia: String,
     distrito: String,
+    direccion: String,
     coordenadas: {
       lat: Number,
       lng: Number,

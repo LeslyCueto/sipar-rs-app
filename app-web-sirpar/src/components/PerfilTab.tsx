@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { obtenerUsuarioActual, logoutUsuario } from '../utils/api';
+import { useState, useEffect } from 'react';
+import { obtenerUsuarioActual, logoutUsuario, actualizarUsuario } from '../utils/api';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
+import { BsLock, BsPerson, BsBoxArrowRight, BsPencil, BsCheck, BsXCircle, BsEye, BsEyeSlash, BsPersonCircle, BsHourglassBottom } from 'react-icons/bs';
 import { ChangePasswordModal } from './ChangePasswordModal';
 
 export function PerfilTab() {
@@ -11,6 +12,10 @@ export function PerfilTab() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [actualizando, setActualizando] = useState(false);
   const [mensaje, setMensaje] = useState<{ tipo: 'success' | 'error'; texto: string } | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [ubigeos, setUbigeos] = useState<any[]>([]);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   
   const { register, handleSubmit, formState: { errors }, reset } = useForm({
     defaultValues: {
@@ -25,7 +30,7 @@ export function PerfilTab() {
     setMensaje(null);
 
     try {
-      const response = await fetch('/api/auth/actualizar-perfil', {
+      const response = await fetch('http://localhost:5000/api/auth/actualizar-perfil', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -37,6 +42,11 @@ export function PerfilTab() {
           telefono: data.telefono,
         }),
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Error al actualizar');
+      }
 
       const result = await response.json();
 
@@ -67,21 +77,23 @@ export function PerfilTab() {
   return (
     <div style={{
       backgroundColor: '#fff',
-      padding: '2rem',
+      padding: 'clamp(1.5rem, 5vw, 2rem)',
       borderRadius: '1rem',
       boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-      maxWidth: '600px',
+      maxWidth: '100%',
       margin: '0 auto',
     }}>
       <h2 style={{
-        fontSize: '1.8rem',
+        fontSize: 'clamp(1.5rem, 4vw, 1.8rem)',
         fontWeight: '700',
         color: '#2d7a47',
         fontFamily: "'Poppins', sans-serif",
-        marginBottom: '2rem',
+        marginBottom: 'clamp(1.5rem, 3vw, 2rem)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
+        gap: '1rem',
+        flexWrap: 'wrap',
       }}>
         Mi Perfil
         <button
@@ -100,20 +112,23 @@ export function PerfilTab() {
             borderRadius: '0.5rem',
             cursor: 'pointer',
             fontFamily: "'Poppins', sans-serif",
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem',
           }}
         >
-          {isEditing ? '✕ Cancelar' : '✏️ Editar'}
+          {isEditing ? <>Cancelar</> : <><BsPencil size={16} style={{ marginRight: '0.3rem' }} /> Editar</>}
         </button>
       </h2>
 
       {/* Avatar */}
       <div style={{
         textAlign: 'center',
-        marginBottom: '2rem',
+        marginBottom: 'clamp(1.5rem, 3vw, 2rem)',
       }}>
         <div style={{
-          width: '80px',
-          height: '80px',
+          width: 'clamp(60px, 15vw, 80px)',
+          height: 'clamp(60px, 15vw, 80px)',
           backgroundColor: '#2d7a47',
           borderRadius: '50%',
           display: 'flex',
@@ -122,7 +137,7 @@ export function PerfilTab() {
           margin: '0 auto',
           fontSize: '2.5rem',
         }}>
-          👤
+          <BsPerson size={40} color="#fff" />
         </div>
       </div>
 
@@ -132,9 +147,9 @@ export function PerfilTab() {
           backgroundColor: mensaje.tipo === 'success' ? '#e8f5e9' : '#ffebee',
           border: `1px solid ${mensaje.tipo === 'success' ? '#2d7a47' : '#c33'}`,
           color: mensaje.tipo === 'success' ? '#2d7a47' : '#c33',
-          padding: '1rem',
+          padding: 'clamp(0.75rem, 2vw, 1rem)',
           borderRadius: '0.5rem',
-          marginBottom: '1.5rem',
+          marginBottom: 'clamp(1rem, 2vw, 1.5rem)',
           fontFamily: "'Poppins', sans-serif",
           textAlign: 'center',
         }}>
@@ -146,7 +161,7 @@ export function PerfilTab() {
       {isEditing ? (
         <form onSubmit={handleSubmit(onSubmit)} style={{
           display: 'grid',
-          gap: '1.5rem',
+          gap: 'clamp(1rem, 2.5vw, 1.5rem)',
         }}>
           <div>
             <label style={{
@@ -240,7 +255,7 @@ export function PerfilTab() {
               marginTop: '1rem',
             }}
           >
-            {actualizando ? '⏳ Guardando...' : '✓ Guardar Cambios'}
+            {actualizando ? <><BsHourglassBottom size={16} style={{ marginRight: '0.3rem', animation: 'spin 1s linear infinite' }} /> Guardando...</> : <><BsCheck size={16} style={{ marginRight: '0.3rem' }} /> Guardar Cambios</>}
           </button>
         </form>
       ) : (
@@ -351,7 +366,7 @@ export function PerfilTab() {
             fontFamily: "'Poppins', sans-serif",
           }}
         >
-          🔐 Cambiar Contraseña
+          <BsLock size={18} style={{ marginRight: '0.5rem' }} /> Cambiar Contraseña
         </button>
 
         <button
@@ -368,7 +383,7 @@ export function PerfilTab() {
             fontFamily: "'Poppins', sans-serif",
           }}
         >
-          🚪 Cerrar Sesión
+          <BsBoxArrowRight size={18} style={{ marginRight: '0.5rem' }} /> Cerrar Sesión
         </button>
       </div>
 

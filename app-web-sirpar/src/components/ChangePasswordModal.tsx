@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { BsHourglassBottom, BsEnvelope, BsCheck, BsLock, BsXCircle } from 'react-icons/bs';
 
 interface ChangePasswordModalProps {
   onClose: () => void;
@@ -10,6 +11,7 @@ export function ChangePasswordModal({ onClose, email }: ChangePasswordModalProps
   const [step, setStep] = useState<'inicial' | 'codigo' | 'exitoso'>('inicial');
   const [enviando, setEnviando] = useState(false);
   const [codigoEnviado, setCodigoEnviado] = useState(false);
+  const [codigoVerificacion, setCodigoVerificacion] = useState<string | null>(null);
   const [mensajeError, setMensajeError] = useState<string | null>(null);
   const [intentosRestantes, setIntentosRestantes] = useState(3);
 
@@ -76,7 +78,7 @@ export function ChangePasswordModal({ onClose, email }: ChangePasswordModalProps
 
     try {
       console.log('Enviando código para:', email);
-      const response = await fetch('/api/auth/enviar-codigo-recuperacion', {
+      const response = await fetch('http://localhost:5000/api/auth/enviar-codigo-recuperacion', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -106,7 +108,10 @@ export function ChangePasswordModal({ onClose, email }: ChangePasswordModalProps
         setMensajeError(null);
         // Mostrar código en desarrollo
         if (result.debug) {
+          setCodigoVerificacion(result.debug);
           console.log('🔐 Código de verificación:', result.debug);
+          // Copiar al portapapeles
+          navigator.clipboard.writeText(result.debug).catch(err => console.error('No se pudo copiar:', err));
         }
       } else {
         setMensajeError(result.mensaje || result.message || 'Error al enviar el código');
@@ -136,17 +141,29 @@ export function ChangePasswordModal({ onClose, email }: ChangePasswordModalProps
     setMensajeError(null);
 
     try {
-      const response = await fetch('/api/auth/cambiar-contrasena', {
+      const codigoLimpio = data.codigo.trim();
+      
+      console.log('📝 Enviando cambio de contraseña:');
+      console.log('Código frontend:', codigoLimpio, 'Tipo:', typeof codigoLimpio, 'Longitud:', codigoLimpio.length);
+      console.log('Contraseña longitud:', data.nuevaPassword.length);
+      console.log('Nueva contraseña tiene mayúsculas:', /[A-Z]/.test(data.nuevaPassword));
+      console.log('Nueva contraseña tiene minúsculas:', /[a-z]/.test(data.nuevaPassword));
+      console.log('Nueva contraseña tiene números:', /[0-9]/.test(data.nuevaPassword));
+      console.log('Nueva contraseña tiene símbolos:', /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(data.nuevaPassword));
+      
+      const response = await fetch('http://localhost:5000/api/auth/cambiar-contrasena', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          codigo: data.codigo,
+          codigo: codigoLimpio,
           nuevaPassword: data.nuevaPassword,
         }),
       });
+
+      console.log('Respuesta status:', response.status);
 
       // Intentar parsear el JSON con mejor manejo de errores
       let result;
@@ -159,12 +176,16 @@ export function ChangePasswordModal({ onClose, email }: ChangePasswordModalProps
         throw new Error('Error del servidor: respuesta inválida');
       }
 
+      console.log('Resultado:', result);
+
       if (response.ok) {
         setStep('exitoso');
         setTimeout(() => onClose(), 2000);
       } else {
         setIntentosRestantes(prev => prev - 1);
-        setMensajeError(result.mensaje || result.message || 'Código inválido. Intenta de nuevo.');
+        const errorMsg = result.mensaje || result.message || 'Código inválido. Intenta de nuevo.';
+        setMensajeError(errorMsg);
+        console.error('Error del servidor:', errorMsg);
         
         if (intentosRestantes <= 1) {
           setMensajeError('Demasiados intentos fallidos. Por favor intenta de nuevo más tarde.');
@@ -222,8 +243,11 @@ export function ChangePasswordModal({ onClose, email }: ChangePasswordModalProps
             fontWeight: '700',
             color: '#2d7a47',
             fontFamily: "'Poppins', sans-serif",
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
           }}>
-            🔐 Cambiar Contraseña
+            <BsLock size={22} /> Cambiar Contraseña
           </h3>
           <button
             onClick={onClose}
@@ -234,7 +258,7 @@ export function ChangePasswordModal({ onClose, email }: ChangePasswordModalProps
               cursor: 'pointer',
             }}
           >
-            ✕
+            <BsXCircle size={20} />
           </button>
         </div>
 
@@ -266,7 +290,8 @@ export function ChangePasswordModal({ onClose, email }: ChangePasswordModalProps
                 opacity: enviando ? 0.6 : 1,
               }}
             >
-              {enviando ? '⏳ Enviando código...' : '📧 Enviar Código'}
+              {enviando ? <><BsHourglassBottom size={16} style={{ marginRight: '0.3rem' }} /> Enviando código...</> : <><BsEnvelope size={16} style={{ marginRight: '0.3rem' }} /> Enviar Código</>
+              }
             </button>
 
             <button
@@ -301,6 +326,39 @@ export function ChangePasswordModal({ onClose, email }: ChangePasswordModalProps
               Revisa tu correo e ingresa el código de 4 dígitos
             </p>
 
+            {/* Mostrar código para desarrollo */}
+            {codigoVerificacion && (
+              <div style={{
+                backgroundColor: '#f0f9ff',
+                border: '2px solid #2d7a47',
+                borderRadius: '0.5rem',
+                padding: '1rem',
+                marginBottom: '1.5rem',
+                textAlign: 'center',
+              }}>
+                <p style={{
+                  fontFamily: "'Poppins', sans-serif",
+                  fontSize: '0.8rem',
+                  color: '#666',
+                  margin: '0 0 0.5rem 0',
+                }}>Código de verificación:</p>
+                <div style={{
+                  fontFamily: "'Poppins', sans-serif",
+                  fontSize: '1.5rem',
+                  fontWeight: 'bold',
+                  color: '#2d7a47',
+                  letterSpacing: '0.3rem',
+                  margin: '0',
+                }}>{codigoVerificacion}</div>
+                <p style={{
+                  fontFamily: "'Poppins', sans-serif",
+                  fontSize: '0.75rem',
+                  color: '#999',
+                  margin: '0.5rem 0 0 0',
+                }}>✓ Copiado al portapapeles</p>
+              </div>
+            )}
+
             {/* Código */}
             <div style={{ marginBottom: '1.5rem' }}>
               <label style={{
@@ -324,6 +382,7 @@ export function ChangePasswordModal({ onClose, email }: ChangePasswordModalProps
                 type="text"
                 placeholder="0000"
                 maxLength={4}
+                autoComplete="one-time-code"
                 style={{
                   width: '100%',
                   padding: '0.75rem',
@@ -357,6 +416,7 @@ export function ChangePasswordModal({ onClose, email }: ChangePasswordModalProps
                   validate: validarPassword,
                 })}
                 type="password"
+                autoComplete="new-password"
                 style={{
                   width: '100%',
                   padding: '0.75rem',
@@ -367,6 +427,97 @@ export function ChangePasswordModal({ onClose, email }: ChangePasswordModalProps
                 }}
               />
               {errors.nuevaPassword && <p style={{ color: '#c33', fontSize: '0.85rem', margin: '0.25rem 0 0 0' }}>{errors.nuevaPassword.message}</p>}
+              
+              {/* Requisitos de contraseña */}
+              {nuevaPassword && (
+                <div style={{
+                  backgroundColor: '#f9f9f9',
+                  border: '1px solid #ddd',
+                  borderRadius: '0.5rem',
+                  padding: '1rem',
+                  marginTop: '0.75rem',
+                  fontFamily: "'Poppins', sans-serif",
+                  fontSize: '0.85rem',
+                }}>
+                  <p style={{
+                    fontWeight: '600',
+                    color: '#333',
+                    margin: '0 0 0.5rem 0',
+                  }}>Requisitos de contraseña:</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      color: nuevaPassword.length >= 12 ? '#2d7a47' : '#999',
+                    }}>
+                      <span style={{
+                        fontSize: '1.2rem',
+                        fontWeight: 'bold',
+                      }}>
+                        {nuevaPassword.length >= 12 ? '✓' : '○'}
+                      </span>
+                      Mínimo 12 caracteres ({nuevaPassword.length}/12)
+                    </div>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      color: /[A-Z]/.test(nuevaPassword) ? '#2d7a47' : '#999',
+                    }}>
+                      <span style={{
+                        fontSize: '1.2rem',
+                        fontWeight: 'bold',
+                      }}>
+                        {/[A-Z]/.test(nuevaPassword) ? '✓' : '○'}
+                      </span>
+                      Mayúsculas (A-Z)
+                    </div>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      color: /[a-z]/.test(nuevaPassword) ? '#2d7a47' : '#999',
+                    }}>
+                      <span style={{
+                        fontSize: '1.2rem',
+                        fontWeight: 'bold',
+                      }}>
+                        {/[a-z]/.test(nuevaPassword) ? '✓' : '○'}
+                      </span>
+                      Minúsculas (a-z)
+                    </div>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      color: /[0-9]/.test(nuevaPassword) ? '#2d7a47' : '#999',
+                    }}>
+                      <span style={{
+                        fontSize: '1.2rem',
+                        fontWeight: 'bold',
+                      }}>
+                        {/[0-9]/.test(nuevaPassword) ? '✓' : '○'}
+                      </span>
+                      Números (0-9)
+                    </div>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      color: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(nuevaPassword) ? '#2d7a47' : '#999',
+                    }}>
+                      <span style={{
+                        fontSize: '1.2rem',
+                        fontWeight: 'bold',
+                      }}>
+                        {/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(nuevaPassword) ? '✓' : '○'}
+                      </span>
+                      Símbolos (!@#$%^&...)
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Confirmar Contraseña */}
@@ -387,6 +538,7 @@ export function ChangePasswordModal({ onClose, email }: ChangePasswordModalProps
                   validate: (value) => value === nuevaPassword || 'Las contraseñas deben coincidir',
                 })}
                 type="password"
+                autoComplete="new-password"
                 style={{
                   width: '100%',
                   padding: '0.75rem',
@@ -431,7 +583,8 @@ export function ChangePasswordModal({ onClose, email }: ChangePasswordModalProps
                 opacity: enviando ? 0.6 : 1,
               }}
             >
-              {enviando ? '⏳ Verificando...' : '✓ Cambiar Contraseña'}
+              {enviando ? <><BsHourglassBottom size={16} style={{ marginRight: '0.3rem' }} /> Verificando...</> : <><BsCheck size={16} style={{ marginRight: '0.3rem' }} /> Cambiar Contraseña</>
+              }
             </button>
 
             <button
@@ -468,7 +621,7 @@ export function ChangePasswordModal({ onClose, email }: ChangePasswordModalProps
               fontSize: '2.5rem',
               margin: '0 0 1rem 0',
             }}>
-              ✓
+              <BsCheck size={40} color="#2d7a47" />
             </p>
             <p style={{
               fontFamily: "'Poppins', sans-serif",

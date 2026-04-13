@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BsArrowLeft, BsEye, BsEyeSlash } from 'react-icons/bs';
 import robot from '../assets/img/robot_register.svg';
-import fondo from '../assets/img/fondo_register.svg';
+import siparLogoNegro from '../assets/img/SIPAR-RS_negro.svg';
 import { loginUsuario, obtenerUsuarioActual } from '../utils/api';
 
 export interface LoginModalProps {
@@ -109,44 +109,31 @@ export function LoginModal({ isOpen, onClose, onSwitchToRegister }: LoginModalPr
           <BsArrowLeft size={24} />
         </button>
 
-        {/* Header con robot y fondo */}
+        {/* Header con robot y logo */}
         <div
           style={{
-            height: 'clamp(200px, 35vw, 280px)',
-            backgroundImage: `url(${fondo})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
+            height: 'clamp(150px, 25vw, 200px)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            paddingTop: '2rem',
+            paddingTop: '1rem',
           }}
         >
           <img
             src={robot}
             alt="robot"
             style={{
-              width: 'clamp(100px, 20vw, 150px)',
+              width: 'clamp(80px, 15vw, 120px)',
               height: 'auto',
               marginBottom: '0.5rem',
             }}
           />
-          <h2
-            style={{
-              fontWeight: 700,
-              color: '#2d7a47',
-              fontSize: 'clamp(1.2rem, 3vw, 1.5rem)',
-              margin: 0,
-              fontFamily: "'Poppins', sans-serif",
-            }}
-          >
-            SIPAR-RS
-          </h2>
+          <img src={siparLogoNegro} alt="SIPAR-RS" style={{ width: '8em', height: 'auto' }} />
         </div>
 
         {/* Formulario */}
-        <form onSubmit={handleSubmit} style={{ padding: 'clamp(1.5rem, 4vw, 2.5rem)' }}>
+        <form onSubmit={handleSubmit} style={{ padding: '0em 2em 2em 2em' }}>
           <h3
             style={{
               textAlign: 'center',

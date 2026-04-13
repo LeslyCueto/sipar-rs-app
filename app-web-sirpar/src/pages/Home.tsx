@@ -62,8 +62,6 @@ export function Home() {
         ctaText="Explorar Ahora"
         onCtaClick={handleHeroClick}
       />
-      {/* <EstadoAmbientalSection />
-      <ZonasNivelRiesgo googleMapsApiKey={googleMapsApiKey} */ }
       <CompromisoSection />
       <NewReportesSection onVerTodos={handleVerTodosReportes} />
       <CallActionSection

@@ -304,8 +304,8 @@ exports.enviarCodigoRecuperacion = async (req, res) => {
       });
     }
 
-    // Buscar usuario
-    const usuario = await Usuario.findById(req.usuarioId);
+    // Buscar usuario (incluir campos de recuperación)
+    const usuario = await Usuario.findById(req.usuarioId).select('+codigoRecuperacion +expiracionCodigo');
     if (!usuario) {
       console.log('❌ Usuario no encontrado con ID:', req.usuarioId);
       return res.status(404).json({
@@ -356,6 +356,10 @@ exports.cambiarContrasena = async (req, res) => {
   try {
     const { codigo, nuevaPassword } = req.body;
 
+    console.log('📝 Intentando cambiar contraseña:');
+    console.log('Código recibido:', codigo, 'Tipo:', typeof codigo);
+    console.log('Usuario ID:', req.usuarioId);
+
     // Validar que el usuario esté autenticado
     if (!req.usuarioId) {
       return res.status(401).json({
@@ -388,17 +392,36 @@ exports.cambiarContrasena = async (req, res) => {
       });
     }
 
-    // Buscar usuario
-    const usuario = await Usuario.findById(req.usuarioId);
+    // Buscar usuario (incluir campos de recuperación)
+    const usuario = await Usuario.findById(req.usuarioId).select('+codigoRecuperacion +expiracionCodigo');
     if (!usuario) {
+      console.log('❌ Usuario no encontrado con ID:', req.usuarioId);
       return res.status(404).json({
         success: false,
         mensaje: 'Usuario no encontrado',
       });
     }
 
+    console.log('✅ Usuario encontrado:', usuario.email);
+    console.log('Código guardado en BD:', usuario.codigoRecuperacion, 'Tipo:', typeof usuario.codigoRecuperacion);
+    console.log('Código recibido:', codigo, 'Tipo:', typeof codigo);
+    console.log('¿Códigos iguales?', usuario.codigoRecuperacion === codigo);
+    console.log('¿Expiración pasada?', new Date() > usuario.expiracionCodigo);
+
     // Verificar código
-    if (!usuario.codigoRecuperacion || usuario.codigoRecuperacion !== codigo) {
+    if (!usuario.codigoRecuperacion) {
+      console.log('❌ No hay código de recuperación guardado');
+      return res.status(400).json({
+        success: false,
+        mensaje: 'No hay código solicitado. Solicita uno nuevo',
+      });
+    }
+
+    const codigoLimpio = String(usuario.codigoRecuperacion).trim();
+    const codigoRecibido = String(codigo).trim();
+
+    if (codigoLimpio !== codigoRecibido) {
+      console.log(`❌ Código NO coincide. BD: "${codigoLimpio}" vs Recibido: "${codigoRecibido}"`);
       return res.status(400).json({
         success: false,
         mensaje: 'Código inválido',
@@ -407,17 +430,22 @@ exports.cambiarContrasena = async (req, res) => {
 
     // Verificar expiración
     if (new Date() > usuario.expiracionCodigo) {
+      console.log('❌ Código expirado');
       return res.status(400).json({
         success: false,
         mensaje: 'El código ha expirado. Solicita uno nuevo',
       });
     }
 
+    console.log('✅ Código válido. Cambiando contraseña...');
+
     // Actualizar contraseña
     usuario.password = nuevaPassword;
     usuario.codigoRecuperacion = null;
     usuario.expiracionCodigo = null;
     await usuario.save();
+
+    console.log('✅ Contraseña actualizada correctamente');
 
     res.status(200).json({
       success: true,
@@ -428,6 +456,171 @@ exports.cambiarContrasena = async (req, res) => {
     res.status(500).json({
       success: false,
       mensaje: error.message || 'Error al cambiar contraseña',
+    });
+  }
+};
+
+// @desc    Actualizar usuario (Admin)
+// @route   PUT /api/auth/usuarios/:id
+// @access  Private
+exports.actualizarUsuarioAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nombre, email, telefono, zona } = req.body;
+
+    // Validar que el usuario esté autenticado
+    if (!req.usuarioId) {
+      return res.status(401).json({
+        success: false,
+        mensaje: 'No autorizado',
+      });
+    }
+
+    // Validar que el ID sea válido
+    if (!id || id.length !== 24) {
+      return res.status(400).json({
+        success: false,
+        mensaje: 'ID de usuario inválido',
+      });
+    }
+
+    // Preparar datos para actualizar
+    const datosActualizar = {};
+    if (nombre) datosActualizar.nombre = nombre;
+    if (email) datosActualizar.email = email.toLowerCase().trim();
+    if (telefono) datosActualizar.telefono = telefono;
+    if (zona) datosActualizar.zona = zona;
+
+    // Si se intenta actualizar el email, verificar que no exista otro usuario con ese email
+    if (email) {
+      const emailNormalizado = email.toLowerCase().trim();
+      const usuarioExistente = await Usuario.findOne({ 
+        email: emailNormalizado,
+        _id: { $ne: id }
+      });
+
+      if (usuarioExistente) {
+        return res.status(400).json({
+          success: false,
+          mensaje: 'Este email ya está siendo usado por otro usuario',
+        });
+      }
+    }
+
+    // Buscar y actualizar usuario
+    const usuario = await Usuario.findByIdAndUpdate(
+      id,
+      datosActualizar,
+      { new: true }
+    ).select('-password');
+
+    if (!usuario) {
+      return res.status(404).json({
+        success: false,
+        mensaje: 'Usuario no encontrado',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      mensaje: 'Usuario actualizado correctamente',
+      usuario,
+    });
+  } catch (error) {
+    console.error('❌ Error actualizando usuario:', error);
+    res.status(500).json({
+      success: false,
+      mensaje: error.message || 'Error al actualizar usuario',
+    });
+  }
+};
+
+// @desc    Crear usuario desde admin (ciudadano u operador)
+// @route   POST /api/auth/usuarios
+// @access  Private (solo admin)
+exports.crearUsuarioAdmin = async (req, res) => {
+  try {
+    const { nombre, email, password, dni, telefono, zona, rol } = req.body;
+
+    // Validar que el usuario esté autenticado
+    if (!req.usuarioId) {
+      return res.status(401).json({
+        success: false,
+        mensaje: 'No autorizado',
+      });
+    }
+
+    // Validar que todos los campos requeridos estén presentes
+    if (!nombre || !email || !password || !dni || !telefono || !zona || !rol) {
+      return res.status(400).json({
+        success: false,
+        mensaje: 'Por favor proporciona todos los campos: nombre, email, contraseña, DNI, teléfono, zona y rol',
+      });
+    }
+
+    // Validar que el rol sea válido
+    if (rol !== 'ciudadano' && rol !== 'operador') {
+      return res.status(400).json({
+        success: false,
+        mensaje: 'El rol debe ser "ciudadano" u "operador"',
+      });
+    }
+
+    // Normalizar email
+    const emailNormalizado = email.toLowerCase().trim();
+
+    // Verificar si el usuario ya existe
+    let usuario = await Usuario.findOne({ email: emailNormalizado });
+    if (usuario) {
+      return res.status(400).json({
+        success: false,
+        mensaje: 'El email ya está registrado',
+      });
+    }
+
+    // Verificar si el DNI ya existe
+    const usuarioDNI = await Usuario.findOne({ dni });
+    if (usuarioDNI) {
+      return res.status(400).json({
+        success: false,
+        mensaje: 'El DNI ya está registrado',
+      });
+    }
+
+    // Crear nuevo usuario con el rol especificado
+    usuario = await Usuario.create({
+      nombre,
+      email: emailNormalizado,
+      password,
+      dni,
+      telefono,
+      zona,
+      rol,
+      estado: 'activo',
+    });
+
+    console.log(`✅ Nuevo ${rol} creado:`, usuario.nombre);
+
+    res.status(201).json({
+      success: true,
+      mensaje: `${rol.charAt(0).toUpperCase() + rol.slice(1)} creado correctamente`,
+      usuario: {
+        id: usuario._id,
+        nombre: usuario.nombre,
+        email: usuario.email,
+        dni: usuario.dni,
+        telefono: usuario.telefono,
+        zona: usuario.zona,
+        rol: usuario.rol,
+        estado: usuario.estado,
+        createdAt: usuario.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error('❌ Error creando usuario desde admin:', error);
+    res.status(500).json({
+      success: false,
+      mensaje: error.message || 'Error al crear usuario',
     });
   }
 };

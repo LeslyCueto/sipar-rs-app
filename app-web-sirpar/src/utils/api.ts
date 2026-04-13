@@ -1,4 +1,5 @@
-const API_BASE_URL = 'http://localhost:5000/api';
+// Usar variable de entorno en producción, localhost en desarrollo
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 // Registro
 export const registroUsuario = async (datosRegistro: any) => {
@@ -81,4 +82,145 @@ export const obtenerToken = () => {
 export const obtenerUsuarioActual = () => {
   const usuario = localStorage.getItem('usuario');
   return usuario ? JSON.parse(usuario) : null;
+};
+
+// Obtener todos los usuarios (para administrador)
+export const obtenerTodosUsuarios = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/usuarios`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.mensaje || 'Error obteniendo usuarios');
+    }
+
+    return data.usuarios || [];
+  } catch (error) {
+    console.error('❌ Error obteniendo usuarios:', error);
+    throw error;
+  }
+};
+
+// Obtener todos los reportes (para administrador)
+export const obtenerTodosReportes = async () => {
+  try {
+    const token = obtenerToken();
+    if (!token) {
+      throw new Error('No hay token disponible');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/reports/admin/todos`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Error obteniendo reportes');
+    }
+
+    return data.reportes || [];
+  } catch (error) {
+    console.error('❌ Error obteniendo reportes:', error);
+    throw error;
+  }
+};
+
+// Actualizar usuario por ID
+export const actualizarUsuario = async (usuarioId: string, datosActualizacion: any) => {
+  try {
+    const token = obtenerToken();
+    if (!token) {
+      throw new Error('No hay token disponible');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/auth/usuarios/${usuarioId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(datosActualizacion),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.mensaje || data.message || 'Error actualizando usuario');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('❌ Error actualizando usuario:', error);
+    throw error;
+  }
+};
+
+// Crear nuevo usuario/operador desde admin
+export const crearUsuarioAdmin = async (datosNuevoUsuario: any) => {
+  try {
+    const token = obtenerToken();
+    if (!token) {
+      throw new Error('No hay token disponible');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/auth/usuarios`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(datosNuevoUsuario),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.mensaje || data.message || 'Error creando usuario');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('❌ Error creando usuario:', error);
+    throw error;
+  }
+};
+
+// Desasignar un reporte de un operador
+export const desasignarReporte = async (reportId: string) => {
+  try {
+    const token = obtenerToken();
+    if (!token) {
+      throw new Error('No hay token disponible');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/reports/assign/${reportId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Error desasignando reporte');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('❌ Error desasignando reporte:', error);
+    throw error;
+  }
 };

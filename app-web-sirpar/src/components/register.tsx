@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { BsArrowLeft, BsEye, BsEyeSlash } from 'react-icons/bs';
+import { BsArrowLeft, BsEye, BsEyeSlash, BsCheck } from 'react-icons/bs';
 import robot from '../assets/img/robot_register.svg';
-import fondo from '../assets/img/fondo_register.svg';
+import siparLogoNegro from '../assets/img/SIPAR-RS_negro.svg';
 import { registroUsuario } from '../utils/api';
 
 export interface RegisterModalProps {
@@ -40,6 +40,24 @@ export function RegisterModal({ isOpen, onClose, onSwitchToLogin }: RegisterModa
 
   const password = watch('password');
   const ubicacion = watch('ubicacion');
+
+  // Autocompletado de distritos peruanos - Definir primero antes de usarla
+  const sugerirDistritos = (valor: string) => {
+    if (!valor || ubigeos.length === 0) {
+      setSuggestions([]);
+      return;
+    }
+
+    const filtered = ubigeos
+      .filter((ubigeo: any) => {
+        const fullText = `${ubigeo.departamento} ${ubigeo.ciudad} ${ubigeo.distrito}`.toLowerCase();
+        return fullText.includes(valor.toLowerCase());
+      })
+      .map((ubigeo: any) => `${ubigeo.departamento}, ${ubigeo.ciudad}, ${ubigeo.distrito}`)
+      .slice(0, 8);
+
+    setSuggestions(filtered);
+  };
 
   // Cargar ubigeos al montar el componente
   useEffect(() => {
@@ -81,7 +99,7 @@ export function RegisterModal({ isOpen, onClose, onSwitchToLogin }: RegisterModa
   // Observar cambios en la ubicación y sugerir distritos
   useEffect(() => {
     sugerirDistritos(ubicacion);
-  }, [ubicacion]);
+  }, [ubicacion, ubigeos]);
 
   if (!isOpen) return null;
 
@@ -94,25 +112,6 @@ export function RegisterModal({ isOpen, onClose, onSwitchToLogin }: RegisterModa
     if (!/[0-9]/.test(pwd)) return 'Debe contener números';
     if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd)) return 'Debe contener símbolos (!@#$%...)';
     return true;
-  };
-
-  // Autocompletado de distritos peruanos
-  // Sugerir ubicaciones desde la API de ubigeos
-  const sugerirDistritos = (valor: string) => {
-    if (!valor || ubigeos.length === 0) {
-      setSuggestions([]);
-      return;
-    }
-
-    const filtered = ubigeos
-      .filter((ubigeo: any) => {
-        const fullText = `${ubigeo.departamento} ${ubigeo.ciudad} ${ubigeo.distrito}`.toLowerCase();
-        return fullText.includes(valor.toLowerCase());
-      })
-      .map((ubigeo: any) => `${ubigeo.departamento}, ${ubigeo.ciudad}, ${ubigeo.distrito}`)
-      .slice(0, 8);
-
-    setSuggestions(filtered);
   };
 
   const handleBack = () => {
@@ -204,24 +203,27 @@ export function RegisterModal({ isOpen, onClose, onSwitchToLogin }: RegisterModa
         {/* Header */}
         <div
           style={{
-            height: 'clamp(200px, 35vw, 280px)',
-            backgroundImage: `url(${fondo})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
+            height: 'clamp(150px, 25vw, 200px)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            paddingTop: '2rem',
+            paddingTop: '1rem',
           }}
         >
-          <img src={robot} alt="robot" style={{ width: 'clamp(100px, 20vw, 150px)', height: 'auto', marginBottom: '0.5rem' }} />
-          <h2 style={{ fontWeight: 700, color: '#2d7a47', fontSize: 'clamp(1.2rem, 3vw, 1.5rem)', margin: 0, fontFamily: "'Poppins', sans-serif" }}>
-            SIPAR-RS
-          </h2>
+          <img
+            src={robot}
+            alt="robot"
+            style={{
+              width: 'clamp(80px, 15vw, 120px)',
+              height: 'auto',
+              marginBottom: '0.5rem',
+            }}
+          />
+          <img src={siparLogoNegro} alt="SIPAR-RS" style={{ width: '8em', height: 'auto' }} />
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} style={{ padding: 'clamp(1.5rem, 4vw, 2.5rem)' }}>
+        <form onSubmit={handleSubmit(onSubmit)} style={{ padding: '0em 2em 2em 2em' }}>
           <h3 style={{ textAlign: 'center', marginBottom: '2rem', fontSize: 'clamp(1.1rem, 2.5vw, 1.3rem)', fontWeight: '600', fontFamily: "'Poppins', sans-serif", color: '#1a1a1a', margin: 0 }}>
             Regístrate
           </h3>
@@ -445,8 +447,8 @@ export function RegisterModal({ isOpen, onClose, onSwitchToLogin }: RegisterModa
                   <div style={{ flex: 1, height: '4px', backgroundColor: /[0-9]/.test(password) ? '#2d7a47' : '#ccc', borderRadius: '2px' }}></div>
                   <div style={{ flex: 1, height: '4px', backgroundColor: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) ? '#2d7a47' : '#ccc', borderRadius: '2px' }}></div>
                 </div>
-                <small style={{ color: '#6b7280' }}>
-                  {password.length < 12 ? '📏' : '✓'} 12+ | {/[A-Z]/.test(password) ? '✓' : '📝'} Mayús | {/[a-z]/.test(password) ? '✓' : '📝'} Minús | {/[0-9]/.test(password) ? '✓' : '📝'} Números | {/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) ? '✓' : '📝'} Símbolos
+                <small style={{ color: '#6b7280', fontSize: '0.75rem' }}>
+                  {password.length < 12 ? '◯' : <BsCheck size={12} style={{ display: 'inline', marginRight: '0.2rem' }} />} 12+ | {/[A-Z]/.test(password) ? <BsCheck size={12} style={{ display: 'inline', marginRight: '0.2rem' }} /> : '◯'} Mayús | {/[a-z]/.test(password) ? <BsCheck size={12} style={{ display: 'inline', marginRight: '0.2rem' }} /> : '◯'} Minús | {/[0-9]/.test(password) ? <BsCheck size={12} style={{ display: 'inline', marginRight: '0.2rem' }} /> : '◯'} Números | {/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) ? <BsCheck size={12} style={{ display: 'inline', marginRight: '0.2rem' }} /> : '◯'} Símbolos
                 </small>
               </div>
             )}

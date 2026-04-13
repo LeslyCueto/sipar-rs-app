@@ -1,4 +1,5 @@
 import { obtenerUsuarioActual } from '../utils/api';
+import { BsFileText } from 'react-icons/bs';
 import robotIcon from '../assets/img/robot-inicio.svg';
 
 interface InicioTabProps {
@@ -15,7 +16,7 @@ export function InicioTab({ onReportarClick }: InicioTabProps) {
   return (
     <div style={{
       backgroundColor: '#fff',
-      padding: '2rem',
+      padding: 'clamp(1.5rem, 5vw, 2rem)',
       borderRadius: '1rem',
       boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
       maxWidth: '600px',
@@ -23,49 +24,51 @@ export function InicioTab({ onReportarClick }: InicioTabProps) {
       textAlign: 'center',
     }}>
       {/* Robot */}
-      <div style={{ marginBottom: '2rem' }}>
+      <div style={{ marginBottom: '0.8rem' }}>
         <img
           src={robotIcon}
           alt="Robot SIPAR"
           style={{
-            width: '150px',
-            height: '150px',
+            width: 'clamp(100px, 25vw, 150px)',
+            height: 'auto',
             margin: '0 auto',
             display: 'block',
+            padding: '0',
           }}
         />
       </div>
 
       {/* Saludo */}
       <h2 style={{
-        fontSize: '2rem',
+        fontSize: 'clamp(1.5rem, 4vw, 2rem)',
         fontWeight: '700',
         color: '#2d7a47',
         fontFamily: "'Poppins', sans-serif",
-        margin: '1rem 0',
+        margin: '0.4rem 0 0.3rem 0',
       }}>
         ¡Hola, {usuario?.nombre?.split(' ')[0]}!
       </h2>
 
       {/* Distrito */}
       <p style={{
-        fontSize: '1.1rem',
+        fontSize: 'clamp(1rem, 2.5vw, 1.1rem)',
         color: '#666',
         fontFamily: "'Poppins', sans-serif",
         fontWeight: '500',
-        margin: '0.5rem 0 1.5rem 0',
+        margin: '0.3rem 0 0.8rem 0',
       }}>
-        {distrito} Limpio y Seguro
+        {distrito?.toUpperCase()} Limpio y Seguro
       </p>
 
       {/* Párrafo descriptivo */}
       <p style={{
-        fontSize: '1rem',
+        fontSize: 'clamp(0.95rem, 2vw, 1rem)',
         color: '#555',
         fontFamily: "'Poppins', sans-serif",
         lineHeight: '1.6',
-        margin: '2rem 0',
+        margin: '0.8rem 0',
         fontStyle: 'italic',
+        padding: '0.4rem',
       }}>
         Detecta focos infecciosos y quemas ilegales en tiempo real. Tu reporte ayuda a salvar nuestro entorno.
       </p>
@@ -77,20 +80,20 @@ export function InicioTab({ onReportarClick }: InicioTabProps) {
           backgroundColor: '#2d7a47',
           color: '#fff',
           border: 'none',
-          padding: '1rem 2rem',
+          padding: 'clamp(0.75rem, 2.5vw, 1rem) clamp(1.5rem, 5vw, 2rem)',
           borderRadius: '0.75rem',
           cursor: 'pointer',
-          fontSize: '1.1rem',
+          fontSize: 'clamp(0.95rem, 2.5vw, 1.1rem)',
           fontWeight: '600',
           fontFamily: "'Poppins', sans-serif",
-          marginTop: '2rem',
+          marginTop: '1rem',
           transition: 'background-color 0.3s',
           width: '100%',
         }}
         onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#245a35')}
         onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#2d7a47')}
       >
-        📋 Reportar Incidente Ahora
+        <BsFileText size={18} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} /> Reportar Incidente Ahora
       </button>
     </div>
   );

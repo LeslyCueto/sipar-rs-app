@@ -7,13 +7,12 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import './App.css';
 
 export default function App() {
+  console.log('✅ App iniciado');
+  
   return (
     <Router>
       <Routes>
-        {/* Página Pública */}
         <Route path="/" element={<Home />} />
-
-        {/* Dashboards Protegidos */}
         <Route
           path="/dashboard/ciudadano"
           element={
@@ -38,8 +37,6 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* Redireccionar rutas desconocidas */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>

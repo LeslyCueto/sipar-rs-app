@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
+import { BsHourglassBottom, BsExclamationTriangle, BsXCircle, BsCamera, BsArrowClockwise, BsCheck } from 'react-icons/bs';
 
 interface CameraCaptureProps {
   onPhotoCaptured: (photoBase64: string) => void;
@@ -7,6 +8,7 @@ interface CameraCaptureProps {
 export function CameraCapture({ onPhotoCaptured }: CameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null); // Usar ref en lugar de state para evitar re-renders
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [photoTaken, setPhotoTaken] = useState<string | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -17,6 +19,8 @@ export function CameraCapture({ onPhotoCaptured }: CameraCaptureProps) {
     setCargando(true);
     setCameraError(null);
     
+    let mediaStream: MediaStream | null = null;
+
     try {
       // Intentar con cámara trasera primero
       const constraints = {
@@ -28,11 +32,9 @@ export function CameraCapture({ onPhotoCaptured }: CameraCaptureProps) {
         audio: false,
       };
 
-      let mediaStream: MediaStream | null = null;
-
       // Usar timeout para evitar que se quede esperando indefinidamente
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Timeout al acceder a la cámara')), 10000)
+        setTimeout(() => reject(new Error('Timeout al acceder a la cámara')), 15000)
       );
 
       try {
@@ -53,24 +55,42 @@ export function CameraCapture({ onPhotoCaptured }: CameraCaptureProps) {
         throw new Error('No se pudo obtener el stream de la cámara');
       }
 
-      setStream(mediaStream);
+      // Configurar el stream en el video
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
+        streamRef.current = mediaStream; // Guardar en ref también
         
-        // Esperar a que el video esté listo
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current?.play().catch(err => {
-            console.error('Error al reproducir video:', err);
-          });
-        };
-        
-        setIsCameraActive(true);
-        setPhotoTaken(null);
-        setCameraError(null);
+        // Intentar reproducir el video
+        try {
+          const playPromise = videoRef.current.play();
+          if (playPromise !== undefined) {
+            await playPromise;
+          }
+          // Solo guardar en state DESPUÉS de que play() se complete exitosamente
+          setStream(mediaStream);
+          setIsCameraActive(true);
+          setPhotoTaken(null);
+          setCameraError(null);
+          console.log('✅ Cámara iniciada correctamente');
+        } catch (playErr: any) {
+          console.warn('⚠️ Advertencia al reproducir video:', playErr.message);
+          // Continuar de todas formas, el video podría reproducirse automáticamente
+          setStream(mediaStream);
+          setIsCameraActive(true);
+          setPhotoTaken(null);
+          setCameraError(null);
+        }
+      } else {
+        throw new Error('Elemento de video no disponible');
       }
     } catch (err: any) {
       console.error('❌ Error al acceder a la cámara:', err.message);
       
+      // Limpiar stream en caso de error
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+      }
+
       // Darle mensajes más específicos según el error
       if (err.name === 'NotAllowedError') {
         setCameraError('Permiso denegado. Por favor permite el acceso a la cámara en la configuración del navegador.');
@@ -108,20 +128,35 @@ export function CameraCapture({ onPhotoCaptured }: CameraCaptureProps) {
   };
 
   const detenerCamara = () => {
-    if (stream) {
-      // Detener todos los tracks de audio y video
-      stream.getTracks().forEach(track => {
+    console.log('🛑 Deteniendo cámara...');
+    
+    // Detener todos los tracks del stream
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => {
+        console.log(`  Deteniendo track: ${track.kind}`);
         track.stop();
       });
+      streamRef.current = null;
+    }
+    
+    if (stream) {
       setStream(null);
     }
     
-    // Limpiar el video element
+    // Limpiar el video element completamente
     if (videoRef.current) {
+      try {
+        videoRef.current.pause();
+      } catch (err) {
+        console.warn('  Advertencia al pausar video:', err);
+      }
       videoRef.current.srcObject = null;
     }
     
     setIsCameraActive(false);
+    setPhotoTaken(null);
+    setCameraError(null);
+    console.log('✅ Cámara detenida completamente');
   };
 
   const reintentar = () => {
@@ -130,13 +165,13 @@ export function CameraCapture({ onPhotoCaptured }: CameraCaptureProps) {
     iniciarCamara();
   };
 
-  // Limpiar la cámara cuando se desmonta el componente
+  // Limpiar la cámara SOLO cuando se desmonta el componente
   useEffect(() => {
     return () => {
-      console.log('🧹 Limpiando cámara...');
-      if (stream) {
-        stream.getTracks().forEach(track => {
-          console.log(`Deteniendo track: ${track.kind}`);
+      console.log('🧹 Componente desmontado: limpiando recursos de cámara');
+      // Usar ref para limpiar sin depender de state
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => {
           track.stop();
         });
       }
@@ -144,7 +179,7 @@ export function CameraCapture({ onPhotoCaptured }: CameraCaptureProps) {
         videoRef.current.srcObject = null;
       }
     };
-  }, [stream]);
+  }, []); // Array vacío = solo en mount/unmount
 
   return (
     <div style={{
@@ -162,7 +197,7 @@ export function CameraCapture({ onPhotoCaptured }: CameraCaptureProps) {
             fontSize: '3rem',
             marginBottom: '1rem',
           }}>
-            📷
+            <BsCamera size={48} />
           </div>
           <p style={{
             color: '#ccc',
@@ -186,7 +221,7 @@ export function CameraCapture({ onPhotoCaptured }: CameraCaptureProps) {
               opacity: cargando ? 0.6 : 1,
             }}
           >
-            {cargando ? '⏳ Iniciando cámara...' : 'Activar Cámara'}
+            {cargando ? <BsHourglassBottom size={24} style={{ animation: 'spin 1s linear infinite' }} /> : 'Activar Cámara'}
           </button>
           
           {cameraError && (
@@ -201,7 +236,8 @@ export function CameraCapture({ onPhotoCaptured }: CameraCaptureProps) {
               fontSize: '0.9rem',
               lineHeight: '1.5',
             }}>
-              ⚠️ {cameraError}
+              {cameraError && <BsExclamationTriangle size={18} style={{ marginRight: '0.5rem' }} />}
+              {cameraError}
             </div>
           )}
         </div>
@@ -215,9 +251,8 @@ export function CameraCapture({ onPhotoCaptured }: CameraCaptureProps) {
           <div style={{
             fontSize: '2rem',
             marginBottom: '1rem',
-            animation: 'spin 1s linear infinite',
           }}>
-            ⏳
+            <BsHourglassBottom size={32} style={{ animation: 'spin 1s linear infinite' }} />
           </div>
           <p style={{
             color: '#ccc',
@@ -236,23 +271,33 @@ export function CameraCapture({ onPhotoCaptured }: CameraCaptureProps) {
         </div>
       )}
 
+      {/* Contenedor de cámara - solo visible cuando activo */}
       {isCameraActive && !photoTaken && (
         <div style={{ position: 'relative', width: '100%' }}>
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            style={{
-              width: '100%',
-              height: 'auto',
-              borderRadius: '0.5rem',
-              backgroundColor: '#000',
-              display: 'block',
-              maxHeight: '400px',
-              objectFit: 'contain',
-            }}
-          />
+          <div style={{
+            width: '100%',
+            height: 'auto',
+            borderRadius: '0.5rem',
+            backgroundColor: '#000',
+            display: 'block',
+            maxHeight: '400px',
+          }}>
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              style={{
+                width: '100%',
+                height: 'auto',
+                borderRadius: '0.5rem',
+                backgroundColor: '#000',
+                display: 'block',
+                maxHeight: '400px',
+                objectFit: 'contain',
+              }}
+            />
+          </div>
           <div style={{
             display: 'flex',
             gap: '1rem',
@@ -275,7 +320,7 @@ export function CameraCapture({ onPhotoCaptured }: CameraCaptureProps) {
                 minWidth: '120px',
               }}
             >
-              ✓ Capturar
+              <BsCheck size={18} style={{ marginRight: '0.3rem' }} /> Capturar
             </button>
             <button
               onClick={detenerCamara}
@@ -292,10 +337,21 @@ export function CameraCapture({ onPhotoCaptured }: CameraCaptureProps) {
                 minWidth: '120px',
               }}
             >
-              ✕ Cancelar
+              <BsXCircle size={18} style={{ marginRight: '0.3rem' }} /> Cancelar
             </button>
           </div>
         </div>
+      )}
+
+      {/* Video element oculto para mantener ref disponible siempre */}
+      {!isCameraActive && (
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          style={{ display: 'none' }}
+        />
       )}
 
       {photoTaken && (
@@ -312,15 +368,19 @@ export function CameraCapture({ onPhotoCaptured }: CameraCaptureProps) {
               objectFit: 'contain',
             }}
           />
-          <p style={{
+          <div style={{
             color: '#2d7a47',
             textAlign: 'center',
             fontFamily: "'Poppins', sans-serif",
             marginTop: '0.5rem',
             fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.3rem',
           }}>
-            ✓ Foto capturada correctamente
-          </p>
+            <BsCheck size={20} /> Foto capturada correctamente
+          </div>
           <div style={{
             display: 'flex',
             gap: '1rem',
@@ -343,7 +403,7 @@ export function CameraCapture({ onPhotoCaptured }: CameraCaptureProps) {
                 minWidth: '120px',
               }}
             >
-              🔄 Reintentar
+              <BsArrowClockwise size={18} style={{ marginRight: '0.3rem' }} /> Reintentar
             </button>
             <button
               disabled
@@ -361,7 +421,7 @@ export function CameraCapture({ onPhotoCaptured }: CameraCaptureProps) {
                 opacity: 0.6,
               }}
             >
-              ✓ Cargado
+              <BsCheck size={18} style={{ marginRight: '0.3rem' }} /> Cargado
             </button>
           </div>
         </div>
